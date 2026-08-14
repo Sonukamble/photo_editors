@@ -19,6 +19,9 @@ export function StyleSelector() {
       >
         Choose your vibe.
       </motion.h2>
+      <p className="mx-auto mt-2 max-w-xl text-center text-sm text-muted md:mx-0 md:text-left">
+        Upload your photo once — then try Hero, Cinema, Cartoon, and Anime.
+      </p>
 
       <div className="mt-8 grid grid-cols-2 gap-4 md:grid-cols-4 md:gap-5">
         {vibes.map((v, i) => (

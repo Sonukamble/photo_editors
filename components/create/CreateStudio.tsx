@@ -7,15 +7,23 @@ import { TemplatePicker } from "@/components/create/TemplatePicker";
 import { PhotoUpload } from "@/components/create/PhotoUpload";
 import { ComposerCanvas } from "@/components/create/ComposerCanvas";
 import { DownloadButton } from "@/components/create/DownloadButton";
+import { VibeSwitcher } from "@/components/create/VibeSwitcher";
 import type { PhotoTransform } from "@/lib/compose-canvas";
+import { loadUserPhoto, saveUserPhoto } from "@/lib/user-photo";
 import {
   getTemplatesForVibe,
+  getVibe,
   resolveCreateSelection,
   type TemplateId,
   type VibeId,
 } from "@/lib/templates";
 
 const MAX_BYTES = 12 * 1024 * 1024;
+const DEFAULT_TRANSFORM: PhotoTransform = {
+  scale: 1.08,
+  offsetX: 0,
+  offsetY: 0,
+};
 
 type Props = {
   vibe?: string;
@@ -28,32 +36,40 @@ export function CreateStudio({ vibe: vibeParam, initialStyle }: Props) {
     [vibeParam, initialStyle]
   );
 
-  const vibeId = initial.vibe.id as VibeId;
-  const vibeTemplates = useMemo(
-    () => getTemplatesForVibe(vibeId),
-    [vibeId]
-  );
-
-  const [selectedId, setSelectedId] = useState<TemplateId>(initial.template.id);
+  const [vibeId, setVibeId] = useState<VibeId>(initial.vibe.id);
+  const [picked, setPicked] = useState<Partial<Record<VibeId, TemplateId>>>({
+    [initial.vibe.id]: initial.template.id,
+  });
   const [objectUrl, setObjectUrl] = useState<string | null>(null);
   const [image, setImage] = useState<HTMLImageElement | null>(null);
   const [uploadError, setUploadError] = useState<string | null>(null);
-  const [transform, setTransform] = useState<PhotoTransform>({
-    scale: 1.08,
-    offsetX: 0,
-    offsetY: 0,
-  });
+  const [transform, setTransform] = useState<PhotoTransform>(DEFAULT_TRANSFORM);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const uploadedRef = useRef(false);
 
+  const vibe = getVibe(vibeId);
+  const vibeTemplates = useMemo(() => getTemplatesForVibe(vibeId), [vibeId]);
+  const selectedId =
+    picked[vibeId] ??
+    (vibeTemplates.some((t) => t.id === initial.template.id)
+      ? initial.template.id
+      : vibe.defaultTemplateId);
   const template =
     vibeTemplates.find((t) => t.id === selectedId) ?? vibeTemplates[0]!;
 
   useEffect(() => {
-    // Keep selection valid when vibe changes
-    if (!vibeTemplates.some((t) => t.id === selectedId)) {
-      setSelectedId(vibeTemplates[0]!.id);
-    }
-  }, [vibeTemplates, selectedId]);
+    let cancelled = false;
+    loadUserPhoto().then((blob) => {
+      if (!blob || cancelled || uploadedRef.current) return;
+      setObjectUrl((prev) => {
+        if (prev) URL.revokeObjectURL(prev);
+        return URL.createObjectURL(blob);
+      });
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     if (!objectUrl) return;
@@ -91,13 +107,22 @@ export function CreateStudio({ vibe: vibeParam, initialStyle }: Props) {
       setUploadError("Image is too large (max 12MB).");
       return;
     }
+    uploadedRef.current = true;
     setUploadError(null);
     setImage(null);
-    setTransform({ scale: 1.08, offsetX: 0, offsetY: 0 });
+    setTransform(DEFAULT_TRANSFORM);
     setObjectUrl((prev) => {
       if (prev) URL.revokeObjectURL(prev);
       return URL.createObjectURL(file);
     });
+    void saveUserPhoto(file);
+  }
+
+  function handleVibe(next: VibeId) {
+    if (next === vibeId) return;
+    setVibeId(next);
+    setTransform(DEFAULT_TRANSFORM);
+    window.history.replaceState(null, "", `/create?vibe=${next}`);
   }
 
   const tipFace =
@@ -126,19 +151,22 @@ export function CreateStudio({ vibe: vibeParam, initialStyle }: Props) {
         </Link>
       </header>
 
-      <div className="mb-8 max-w-3xl">
+      <div className="mb-6 max-w-3xl">
         <p className="mb-2 text-sm font-semibold tracking-wide text-saffron">
-          {initial.vibe.emoji} {initial.vibe.name} vibe
+          {vibe.emoji} {vibe.name}
         </p>
         <h1 className="font-display text-[1.85rem] font-extrabold leading-[1.1] tracking-tight text-navy sm:text-4xl md:text-5xl">
-          UPLOAD YOUR PHOTO.
+          ONE PHOTO.
           <br />
-          PICK YOUR <span className="text-gradient-saffron">TEMPLATE.</span>
+          EVERY <span className="text-gradient-saffron">VIBE.</span>
         </h1>
         <p className="mt-3 text-sm text-muted sm:text-base">
-          {vibeTemplates.length} {initial.vibe.name.toLowerCase()} Independence
-          Day posters — same editor, this vibe’s frames.
+          Upload once, then flip between Hero, Cinema, Cartoon, and Anime.
         </p>
+      </div>
+
+      <div className="mb-8">
+        <VibeSwitcher value={vibeId} onChange={handleVibe} />
       </div>
 
       <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)] lg:gap-10">
@@ -153,7 +181,7 @@ export function CreateStudio({ vibe: vibeParam, initialStyle }: Props) {
         <div className="space-y-4 lg:pt-1">
           <PhotoUpload
             onFile={handleFile}
-            hasPhoto={Boolean(objectUrl)}
+            previewUrl={objectUrl}
             error={uploadError}
           />
 
@@ -171,7 +199,7 @@ export function CreateStudio({ vibe: vibeParam, initialStyle }: Props) {
           <DownloadButton canvasRef={canvasRef} disabled={!image} />
           {!image && (
             <p className="text-center text-sm text-muted lg:text-left">
-              Upload a photo to download or share.
+              Upload a photo once — then download any vibe.
             </p>
           )}
         </div>
@@ -180,10 +208,10 @@ export function CreateStudio({ vibe: vibeParam, initialStyle }: Props) {
       <TemplatePicker
         templates={vibeTemplates}
         selectedId={template.id}
-        title={`${initial.vibe.name} templates (${vibeTemplates.length})`}
+        title={`${vibe.name} templates (${vibeTemplates.length})`}
         onSelect={(id) => {
-          setSelectedId(id);
-          setTransform({ scale: 1.08, offsetX: 0, offsetY: 0 });
+          setPicked((prev) => ({ ...prev, [vibeId]: id }));
+          setTransform(DEFAULT_TRANSFORM);
         }}
       />
     </div>
