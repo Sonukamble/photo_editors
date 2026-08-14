@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Script from "next/script";
 import { DM_Sans, Outfit } from "next/font/google";
+import { GA_ID } from "@/lib/analytics";
 import "./globals.css";
 
 const outfit = Outfit({
@@ -20,8 +21,6 @@ export const metadata: Metadata = {
   description:
     "Create a beautiful Independence Day post made for your Instagram. Free to try. No login.",
 };
-
-const GA_ID = "G-7LTC978LZT";
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (

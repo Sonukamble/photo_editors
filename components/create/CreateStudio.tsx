@@ -10,6 +10,7 @@ import { DownloadButton } from "@/components/create/DownloadButton";
 import { VibeSwitcher } from "@/components/create/VibeSwitcher";
 import type { PhotoTransform } from "@/lib/compose-canvas";
 import { loadUserPhoto, saveUserPhoto } from "@/lib/user-photo";
+import { track } from "@/lib/analytics";
 import {
   getTemplatesForVibe,
   getVibe,
@@ -58,6 +59,11 @@ export function CreateStudio({ vibe: vibeParam, initialStyle }: Props) {
   const template =
     vibeTemplates.find((t) => t.id === selectedId) ?? vibeTemplates[0]!;
 
+  const vibeIdRef = useRef(vibeId);
+  const selectedIdRef = useRef(selectedId);
+  vibeIdRef.current = vibeId;
+  selectedIdRef.current = selectedId;
+
   useEffect(() => {
     let cancelled = false;
     loadUserPhoto().then((blob) => {
@@ -78,7 +84,15 @@ export function CreateStudio({ vibe: vibeParam, initialStyle }: Props) {
     let cancelled = false;
     const img = new window.Image();
     img.onload = () => {
-      if (!cancelled) setImage(img);
+      if (!cancelled) {
+        setImage(img);
+        if (uploadedRef.current) {
+          track("image_generated", {
+            vibe: vibeIdRef.current,
+            template_id: selectedIdRef.current,
+          });
+        }
+      }
     };
     img.onerror = () => {
       if (!cancelled) {
@@ -134,6 +148,7 @@ export function CreateStudio({ vibe: vibeParam, initialStyle }: Props) {
       return URL.createObjectURL(file);
     });
     void saveUserPhoto(file);
+    track("photo_uploaded", { vibe: vibeId, template_id: selectedId });
     scrollToStudio();
   }
 
@@ -142,7 +157,19 @@ export function CreateStudio({ vibe: vibeParam, initialStyle }: Props) {
     setVibeId(next);
     setTransform(DEFAULT_TRANSFORM);
     window.history.replaceState(null, "", `/create?vibe=${next}`);
-    if (objectUrl) scrollToStudio();
+    const nextVibe = getVibe(next);
+    track("template_selected", {
+      vibe: next,
+      template_id: picked[next] ?? nextVibe.defaultTemplateId,
+      source: "vibe_switch",
+    });
+    if (objectUrl) {
+      track("image_generated", {
+        vibe: next,
+        template_id: picked[next] ?? nextVibe.defaultTemplateId,
+      });
+      scrollToStudio();
+    }
   }
 
   const tipFace =
@@ -222,7 +249,12 @@ export function CreateStudio({ vibe: vibeParam, initialStyle }: Props) {
             </ul>
           </div>
 
-          <DownloadButton canvasRef={canvasRef} disabled={!image} />
+          <DownloadButton
+            canvasRef={canvasRef}
+            disabled={!image}
+            vibe={vibeId}
+            templateId={template.id}
+          />
           {!image && (
             <p className="text-center text-sm text-muted lg:text-left">
               Upload a photo once — then download any vibe.
@@ -238,6 +270,17 @@ export function CreateStudio({ vibe: vibeParam, initialStyle }: Props) {
         onSelect={(id) => {
           setPicked((prev) => ({ ...prev, [vibeId]: id }));
           setTransform(DEFAULT_TRANSFORM);
+          track("template_selected", {
+            vibe: vibeId,
+            template_id: id,
+            source: "picker",
+          });
+          if (objectUrl) {
+            track("image_generated", {
+              vibe: vibeId,
+              template_id: id,
+            });
+          }
           scrollToStudio();
         }}
       />

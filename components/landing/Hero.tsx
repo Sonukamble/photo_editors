@@ -1,10 +1,16 @@
 "use client";
 
+import { useEffect } from "react";
 import { motion } from "framer-motion";
 import { ButtonLink } from "@/components/ui/Button";
+import { track, trackVisitorOnce } from "@/lib/analytics";
 import { CreativePreview } from "./CreativePreview";
 
 export function Hero() {
+  useEffect(() => {
+    trackVisitorOnce();
+  }, []);
+
   return (
     <section className="mx-auto max-w-6xl px-4 pb-10 pt-8 md:px-8 md:pb-14 md:pt-12">
       <div className="grid items-center gap-10 lg:grid-cols-2 lg:gap-14">
@@ -32,6 +38,9 @@ export function Hero() {
             <ButtonLink
               href="#vibe"
               className="min-h-12 px-8 text-base sm:text-lg"
+              onClick={() =>
+                track("create_clicked", { source: "hero_cta" })
+              }
             >
               Create Mine 🇮🇳
             </ButtonLink>

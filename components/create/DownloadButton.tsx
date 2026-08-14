@@ -4,13 +4,22 @@ import { useState } from "react";
 import { Download, Share2 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { canvasToPngBlob } from "@/lib/compose-canvas";
+import { track } from "@/lib/analytics";
+import type { TemplateId, VibeId } from "@/lib/templates";
 
 type Props = {
   canvasRef: React.RefObject<HTMLCanvasElement | null>;
   disabled: boolean;
+  vibe?: VibeId;
+  templateId?: TemplateId;
 };
 
-export function DownloadButton({ canvasRef, disabled }: Props) {
+export function DownloadButton({
+  canvasRef,
+  disabled,
+  vibe,
+  templateId,
+}: Props) {
   const [busy, setBusy] = useState(false);
   const [shareNote, setShareNote] = useState<string | null>(null);
 
@@ -32,6 +41,7 @@ export function DownloadButton({ canvasRef, disabled }: Props) {
       a.download = "15aug-2026.png";
       a.click();
       URL.revokeObjectURL(url);
+      track("downloaded", { vibe, template_id: templateId });
     } finally {
       setBusy(false);
     }
@@ -51,6 +61,7 @@ export function DownloadButton({ canvasRef, disabled }: Props) {
           title: "15 AUG",
           text: "My Independence Day poster 🇮🇳",
         });
+        track("shared", { vibe, template_id: templateId, method: "native" });
         return;
       }
 
@@ -61,6 +72,11 @@ export function DownloadButton({ canvasRef, disabled }: Props) {
       a.download = "15aug-2026.png";
       a.click();
       URL.revokeObjectURL(url);
+      track("downloaded", {
+        vibe,
+        template_id: templateId,
+        source: "share_fallback",
+      });
       setShareNote("Share isn’t supported here — poster downloaded instead.");
     } catch (err) {
       if (err instanceof Error && err.name === "AbortError") return;

@@ -3,6 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { motion } from "framer-motion";
+import { track } from "@/lib/analytics";
 import { vibes } from "@/lib/templates";
 
 export function StyleSelector() {
@@ -35,6 +36,12 @@ export function StyleSelector() {
             <Link
               href={v.href ?? `/create?vibe=${v.id}`}
               className="group block focus-visible:outline-none"
+              onClick={() =>
+                track("create_clicked", {
+                  source: "vibe_card",
+                  vibe: v.id,
+                })
+              }
             >
               <motion.div
                 whileHover={{ scale: 1.03 }}
