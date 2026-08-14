@@ -46,6 +46,7 @@ export function CreateStudio({ vibe: vibeParam, initialStyle }: Props) {
   const [transform, setTransform] = useState<PhotoTransform>(DEFAULT_TRANSFORM);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const uploadedRef = useRef(false);
+  const studioRef = useRef<HTMLElement | null>(null);
 
   const vibe = getVibe(vibeId);
   const vibeTemplates = useMemo(() => getTemplatesForVibe(vibeId), [vibeId]);
@@ -98,6 +99,23 @@ export function CreateStudio({ vibe: vibeParam, initialStyle }: Props) {
     };
   }, [objectUrl]);
 
+  function scrollToStudio() {
+    const run = () => {
+      const el = studioRef.current;
+      if (!el) return;
+      const prefersReduced = window.matchMedia(
+        "(prefers-reduced-motion: reduce)"
+      ).matches;
+      el.scrollIntoView({
+        behavior: prefersReduced ? "auto" : "smooth",
+        block: "start",
+      });
+    };
+    requestAnimationFrame(() => {
+      window.setTimeout(run, 50);
+    });
+  }
+
   function handleFile(file: File) {
     if (!file.type.startsWith("image/")) {
       setUploadError("Please choose an image file.");
@@ -116,6 +134,7 @@ export function CreateStudio({ vibe: vibeParam, initialStyle }: Props) {
       return URL.createObjectURL(file);
     });
     void saveUserPhoto(file);
+    scrollToStudio();
   }
 
   function handleVibe(next: VibeId) {
@@ -123,6 +142,7 @@ export function CreateStudio({ vibe: vibeParam, initialStyle }: Props) {
     setVibeId(next);
     setTransform(DEFAULT_TRANSFORM);
     window.history.replaceState(null, "", `/create?vibe=${next}`);
+    if (objectUrl) scrollToStudio();
   }
 
   const tipFace =
@@ -171,7 +191,11 @@ export function CreateStudio({ vibe: vibeParam, initialStyle }: Props) {
         <VibeSwitcher value={vibeId} onChange={handleVibe} />
       </div>
 
-      <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)] lg:gap-10">
+      <section
+        ref={studioRef}
+        id="studio"
+        className="scroll-mt-4 grid items-start gap-6 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)] lg:gap-10"
+      >
         <ComposerCanvas
           canvasLayout={template.canvas}
           image={image}
@@ -205,7 +229,7 @@ export function CreateStudio({ vibe: vibeParam, initialStyle }: Props) {
             </p>
           )}
         </div>
-      </div>
+      </section>
 
       <TemplatePicker
         templates={vibeTemplates}
@@ -214,6 +238,7 @@ export function CreateStudio({ vibe: vibeParam, initialStyle }: Props) {
         onSelect={(id) => {
           setPicked((prev) => ({ ...prev, [vibeId]: id }));
           setTransform(DEFAULT_TRANSFORM);
+          scrollToStudio();
         }}
       />
     </div>
