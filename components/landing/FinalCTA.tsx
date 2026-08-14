@@ -16,7 +16,7 @@ export function FinalCTA() {
         </h2>
         <div className="mt-7 flex justify-center">
           <ButtonLink
-            href="/create?style=heritage"
+            href="/create?vibe=hero"
             className="min-h-12 px-8 text-base sm:text-lg"
           >
             Create My 15 August 🇮🇳

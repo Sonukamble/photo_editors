@@ -126,11 +126,13 @@ export function CreateStudio({ vibe: vibeParam, initialStyle }: Props) {
   }
 
   const tipFace =
-    vibeId === "cartoon" || vibeId === "anime"
-      ? "Fit your photo inside the frame — drag and zoom"
-      : vibeId === "cinema"
-        ? "Place your face in the silhouette — it fades into the poster"
-        : "Drag the preview to position your photo";
+    vibeId === "hero"
+      ? "Center your face in the circle — drag and zoom"
+      : vibeId === "cartoon" || vibeId === "anime"
+        ? "Fit your photo inside the frame — drag and zoom"
+        : vibeId === "cinema"
+          ? "Center your face in the circle — drag and zoom"
+          : "Drag the preview to position your photo";
 
   return (
     <div className="mx-auto max-w-6xl px-4 pb-14 pt-5 md:px-8 md:pt-8">

@@ -18,10 +18,10 @@ export function CreativePreview() {
       <div className="animate-float-soft relative rounded-3xl bg-white p-1.5 shadow-[0_25px_60px_rgba(15,27,45,0.18)] ring-1 ring-navy/5">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
-          src="/templates/template-04-heroes-tribute.png"
-          alt="Remembering our heroes — Independence Day creative preview"
-          width={720}
-          height={982}
+          src="/templates/hero3.png"
+          alt="Independence Day hero template preview"
+          width={1068}
+          height={1008}
           className="block h-auto w-full rounded-[1.35rem] object-cover"
           decoding="async"
         />
