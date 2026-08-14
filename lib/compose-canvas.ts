@@ -1,4 +1,9 @@
-import type { PhotoShape, PhotoSlot, TemplateCanvas } from "@/lib/templates";
+import type {
+  PhotoFade,
+  PhotoShape,
+  PhotoSlot,
+  TemplateCanvas,
+} from "@/lib/templates";
 
 export type PhotoTransform = {
   scale: number;
@@ -68,32 +73,11 @@ export function slotToCanvasRect(
   };
 }
 
-function drawCoverImage(
+function clipPhotoShape(
   ctx: CanvasRenderingContext2D,
-  img: HTMLImageElement,
   rect: { x: number; y: number; w: number; h: number },
-  transform: PhotoTransform,
   shape: PhotoShape
 ) {
-  const { scale, offsetX, offsetY } = transform;
-  const imgRatio = img.naturalWidth / img.naturalHeight;
-  const rectRatio = rect.w / rect.h;
-
-  let drawW: number;
-  let drawH: number;
-
-  if (imgRatio > rectRatio) {
-    drawH = rect.h * scale;
-    drawW = drawH * imgRatio;
-  } else {
-    drawW = rect.w * scale;
-    drawH = drawW / imgRatio;
-  }
-
-  const cx = rect.x + rect.w / 2 + offsetX;
-  const cy = rect.y + rect.h / 2 + offsetY;
-
-  ctx.save();
   ctx.beginPath();
   if (shape === "circle") {
     const r = Math.min(rect.w, rect.h) / 2;
@@ -111,9 +95,87 @@ function drawCoverImage(
   } else {
     roundRect(ctx, rect.x, rect.y, rect.w, rect.h, Math.min(24, rect.w * 0.06));
   }
-  ctx.clip();
-  ctx.drawImage(img, cx - drawW / 2, cy - drawH / 2, drawW, drawH);
-  ctx.restore();
+}
+
+function drawCoverImage(
+  ctx: CanvasRenderingContext2D,
+  img: HTMLImageElement,
+  rect: { x: number; y: number; w: number; h: number },
+  transform: PhotoTransform,
+  shape: PhotoShape,
+  fade: PhotoFade = "none"
+) {
+  const { scale, offsetX, offsetY } = transform;
+  const imgRatio = img.naturalWidth / img.naturalHeight;
+  const rectRatio = rect.w / rect.h;
+
+  let drawW: number;
+  let drawH: number;
+
+  if (imgRatio > rectRatio) {
+    drawH = rect.h * scale;
+    drawW = drawH * imgRatio;
+  } else {
+    drawW = rect.w * scale;
+    drawH = drawW / imgRatio;
+  }
+
+  const paint = (
+    target: CanvasRenderingContext2D,
+    r: { x: number; y: number; w: number; h: number },
+    ox: number,
+    oy: number
+  ) => {
+    const cx = r.x + r.w / 2 + ox;
+    const cy = r.y + r.h / 2 + oy;
+    target.save();
+    clipPhotoShape(target, r, shape);
+    target.clip();
+    target.drawImage(img, cx - drawW / 2, cy - drawH / 2, drawW, drawH);
+    target.restore();
+  };
+
+  if (fade === "none") {
+    paint(ctx, rect, offsetX, offsetY);
+    return;
+  }
+
+  const tmp = document.createElement("canvas");
+  tmp.width = Math.max(1, Math.round(rect.w));
+  tmp.height = Math.max(1, Math.round(rect.h));
+  const tctx = tmp.getContext("2d");
+  if (!tctx) return;
+
+  const sx = tmp.width / rect.w;
+  const sy = tmp.height / rect.h;
+  const local = { x: 0, y: 0, w: tmp.width, h: tmp.height };
+  const localDrawW = drawW * sx;
+  const localDrawH = drawH * sy;
+  const lcx = local.w / 2 + offsetX * sx;
+  const lcy = local.h / 2 + offsetY * sy;
+
+  tctx.save();
+  clipPhotoShape(tctx, local, shape);
+  tctx.clip();
+  tctx.drawImage(
+    img,
+    lcx - localDrawW / 2,
+    lcy - localDrawH / 2,
+    localDrawW,
+    localDrawH
+  );
+  tctx.restore();
+
+  const g = tctx.createLinearGradient(0, 0, 0, tmp.height);
+  g.addColorStop(0, "#000");
+  g.addColorStop(0.58, "#000");
+  g.addColorStop(0.84, "rgba(0,0,0,0.4)");
+  g.addColorStop(1, "rgba(0,0,0,0)");
+  tctx.globalCompositeOperation = "destination-in";
+  tctx.fillStyle = g;
+  tctx.fillRect(0, 0, tmp.width, tmp.height);
+
+  ctx.drawImage(tmp, rect.x, rect.y, rect.w, rect.h);
 }
 
 export function composeCanvas(
@@ -126,7 +188,7 @@ export function composeCanvas(
   const ctx = canvas.getContext("2d");
   if (!ctx) return;
 
-  const { width: w, height: h, photo: slot, photoShape } = template;
+  const { width: w, height: h, photo: slot, photoShape, photoFade } = template;
   canvas.width = w;
   canvas.height = h;
 
@@ -150,7 +212,7 @@ export function composeCanvas(
         w,
         h
       );
-      drawCoverImage(ctx, photo, rect, transform, photoShape);
+      drawCoverImage(ctx, photo, rect, transform, photoShape, photoFade);
     }
   } else if (photo) {
     // Fallback before art loads
@@ -160,7 +222,7 @@ export function composeCanvas(
       w: slot.w * w,
       h: slot.h * h,
     };
-    drawCoverImage(ctx, photo, rect, transform, photoShape);
+    drawCoverImage(ctx, photo, rect, transform, photoShape, photoFade);
   }
 }
 

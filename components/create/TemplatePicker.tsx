@@ -2,18 +2,25 @@
 
 import Image from "next/image";
 import { motion } from "framer-motion";
-import { templates, type TemplateId } from "@/lib/templates";
+import type { Template, TemplateId } from "@/lib/templates";
 
 type Props = {
+  templates: Template[];
   selectedId: TemplateId;
   onSelect: (id: TemplateId) => void;
+  title?: string;
 };
 
-export function TemplatePicker({ selectedId, onSelect }: Props) {
+export function TemplatePicker({
+  templates,
+  selectedId,
+  onSelect,
+  title,
+}: Props) {
   return (
     <section className="mt-12 md:mt-16">
       <h2 className="font-display text-xl font-bold text-navy sm:text-2xl">
-        Choose from {templates.length} templates
+        {title ?? `Choose from ${templates.length} templates`}
       </h2>
 
       <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 md:gap-4">

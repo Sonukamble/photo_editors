@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { TemplatePicker } from "@/components/create/TemplatePicker";
@@ -9,23 +9,32 @@ import { ComposerCanvas } from "@/components/create/ComposerCanvas";
 import { DownloadButton } from "@/components/create/DownloadButton";
 import type { PhotoTransform } from "@/lib/compose-canvas";
 import {
-  DEFAULT_TEMPLATE_ID,
-  getTemplate,
-  isTemplateId,
-  templates,
+  getTemplatesForVibe,
+  resolveCreateSelection,
   type TemplateId,
+  type VibeId,
 } from "@/lib/templates";
 
 const MAX_BYTES = 12 * 1024 * 1024;
 
 type Props = {
+  vibe?: string;
   initialStyle?: string;
 };
 
-export function CreateStudio({ initialStyle }: Props) {
-  const [selectedId, setSelectedId] = useState<TemplateId>(() =>
-    isTemplateId(initialStyle) ? initialStyle : DEFAULT_TEMPLATE_ID
+export function CreateStudio({ vibe: vibeParam, initialStyle }: Props) {
+  const initial = useMemo(
+    () => resolveCreateSelection({ vibe: vibeParam, style: initialStyle }),
+    [vibeParam, initialStyle]
   );
+
+  const vibeId = initial.vibe.id as VibeId;
+  const vibeTemplates = useMemo(
+    () => getTemplatesForVibe(vibeId),
+    [vibeId]
+  );
+
+  const [selectedId, setSelectedId] = useState<TemplateId>(initial.template.id);
   const [objectUrl, setObjectUrl] = useState<string | null>(null);
   const [image, setImage] = useState<HTMLImageElement | null>(null);
   const [uploadError, setUploadError] = useState<string | null>(null);
@@ -36,7 +45,15 @@ export function CreateStudio({ initialStyle }: Props) {
   });
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
-  const template = getTemplate(selectedId);
+  const template =
+    vibeTemplates.find((t) => t.id === selectedId) ?? vibeTemplates[0]!;
+
+  useEffect(() => {
+    // Keep selection valid when vibe changes
+    if (!vibeTemplates.some((t) => t.id === selectedId)) {
+      setSelectedId(vibeTemplates[0]!.id);
+    }
+  }, [vibeTemplates, selectedId]);
 
   useEffect(() => {
     if (!objectUrl) return;
@@ -83,6 +100,13 @@ export function CreateStudio({ initialStyle }: Props) {
     });
   }
 
+  const tipFace =
+    vibeId === "cartoon" || vibeId === "anime"
+      ? "Fit your photo inside the frame — drag and zoom"
+      : vibeId === "cinema"
+        ? "Place your face in the silhouette — it fades into the poster"
+        : "Drag the preview to position your photo";
+
   return (
     <div className="mx-auto max-w-6xl px-4 pb-14 pt-5 md:px-8 md:pt-8">
       <header className="mb-8 flex items-center justify-between gap-3">
@@ -103,14 +127,17 @@ export function CreateStudio({ initialStyle }: Props) {
       </header>
 
       <div className="mb-8 max-w-3xl">
+        <p className="mb-2 text-sm font-semibold tracking-wide text-saffron">
+          {initial.vibe.emoji} {initial.vibe.name} vibe
+        </p>
         <h1 className="font-display text-[1.85rem] font-extrabold leading-[1.1] tracking-tight text-navy sm:text-4xl md:text-5xl">
           UPLOAD YOUR PHOTO.
           <br />
           PICK YOUR <span className="text-gradient-saffron">TEMPLATE.</span>
         </h1>
         <p className="mt-3 text-sm text-muted sm:text-base">
-          {templates.length} Independence Day posters — drop your photo into
-          the frame, then download or share.
+          {vibeTemplates.length} {initial.vibe.name.toLowerCase()} Independence
+          Day posters — same editor, this vibe’s frames.
         </p>
       </div>
 
@@ -136,7 +163,7 @@ export function CreateStudio({ initialStyle }: Props) {
             </p>
             <ul className="mt-2 space-y-1.5 text-sm text-muted">
               <li>• Use a clear portrait with good light</li>
-              <li>• Drag the preview to position your face</li>
+              <li>• {tipFace}</li>
               <li>• Zoom until you fill the frame cleanly</li>
             </ul>
           </div>
@@ -151,7 +178,9 @@ export function CreateStudio({ initialStyle }: Props) {
       </div>
 
       <TemplatePicker
-        selectedId={selectedId}
+        templates={vibeTemplates}
+        selectedId={template.id}
+        title={`${initial.vibe.name} templates (${vibeTemplates.length})`}
         onSelect={(id) => {
           setSelectedId(id);
           setTransform({ scale: 1.08, offsetX: 0, offsetY: 0 });

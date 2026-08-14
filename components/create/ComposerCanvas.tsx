@@ -93,10 +93,14 @@ export function ComposerCanvas({
     <div className="w-full">
       <div className="overflow-hidden rounded-[1.5rem] bg-white p-2 shadow-[0_20px_50px_rgba(15,27,45,0.12)] ring-1 ring-navy/5 sm:p-3">
         <canvas
+          key={canvasLayout.imageSrc}
           ref={canvasRef}
-          className={`mx-auto aspect-[4/5] w-full max-w-md rounded-[1.15rem] touch-none ${
-            image ? "cursor-grab active:cursor-grabbing" : "cursor-default"
-          }`}
+          style={{
+            aspectRatio: `${canvasLayout.width} / ${canvasLayout.height}`,
+          }}
+          className={`mx-auto w-full max-w-md rounded-[1.15rem] touch-none transition-opacity duration-300 ${
+            templateArt ? "opacity-100" : "opacity-70"
+          } ${image ? "cursor-grab active:cursor-grabbing" : "cursor-default"}`}
           onPointerDown={onPointerDown}
           onPointerMove={onPointerMove}
           onPointerUp={onPointerUp}

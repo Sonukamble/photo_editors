@@ -4,6 +4,7 @@ export type {
   TemplateCanvas,
   PhotoSlot,
   PhotoShape,
+  PhotoFade,
   Vibe,
   VibeId,
 } from "@/lib/templates/types";
@@ -16,4 +17,8 @@ export {
   vibes,
   getTemplate,
   isTemplateId,
+  isVibeId,
+  getVibe,
+  getTemplatesForVibe,
+  resolveCreateSelection,
 } from "@/lib/templates/catalog";

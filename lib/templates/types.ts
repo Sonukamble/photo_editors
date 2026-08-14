@@ -1,3 +1,5 @@
+export type VibeId = "hero" | "cinema" | "cartoon" | "anime";
+
 export type TemplateId =
   | "heritage"
   | "moment"
@@ -9,9 +11,20 @@ export type TemplateId =
   | "paint"
   | "ribbon-a"
   | "ribbon-b"
-  | "global";
-
-export type VibeId = "hero" | "cinema" | "cartoon" | "anime";
+  | "global"
+  | "cinema-arches"
+  | "cinema-flag"
+  | "cinema-legacy"
+  | "cinema-split"
+  | "cinema-horizon"
+  | "cartoon-frame"
+  | "cartoon-parade"
+  | "cartoon-polaroid"
+  | "anime-halo"
+  | "anime-circle"
+  | "anime-sky"
+  | "anime-celebrate"
+  | "anime-polaroid";
 
 export type Vibe = {
   id: VibeId;
@@ -22,6 +35,7 @@ export type Vibe = {
   thumbClass: string;
   imageSrc: string;
   href?: string;
+  defaultTemplateId: TemplateId;
 };
 
 /** Photo hole as fractions (0–1) of the template PNG itself */
@@ -34,11 +48,15 @@ export type PhotoSlot = {
 
 export type PhotoShape = "rect" | "ellipse" | "circle";
 
+/** Soft blend of the photo into the template (cinematic silhouettes). */
+export type PhotoFade = "none" | "bottom";
+
 export type TemplateCanvas = {
   width: number;
   height: number;
   photo: PhotoSlot;
   photoShape: PhotoShape;
+  photoFade: PhotoFade;
   caption: string;
   subcaption: string;
   imageSrc: string;
@@ -46,6 +64,7 @@ export type TemplateCanvas = {
 
 export type Template = {
   id: TemplateId;
+  vibe: VibeId;
   name: string;
   emoji: string;
   blurb: string;
@@ -61,14 +80,18 @@ export function makeCanvas(opts: {
   subcaption: string;
   photo: PhotoSlot;
   photoShape?: PhotoShape;
+  photoFade?: PhotoFade;
+  width?: number;
+  height?: number;
 }): TemplateCanvas {
   return {
-    width: CANVAS_WIDTH,
-    height: CANVAS_HEIGHT,
+    width: opts.width ?? CANVAS_WIDTH,
+    height: opts.height ?? CANVAS_HEIGHT,
     imageSrc: opts.imageSrc,
     caption: opts.caption,
     subcaption: opts.subcaption,
     photo: opts.photo,
     photoShape: opts.photoShape ?? "rect",
+    photoFade: opts.photoFade ?? "none",
   };
 }
