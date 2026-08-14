@@ -7,6 +7,9 @@ import { canvasToPngBlob } from "@/lib/compose-canvas";
 import { track } from "@/lib/analytics";
 import type { TemplateId, VibeId } from "@/lib/templates";
 
+const SITE_URL = "https://photo-editors.vercel.app/";
+const SHARE_TEXT = `My Independence Day poster 🇮🇳\n${SITE_URL}`;
+
 type Props = {
   canvasRef: React.RefObject<HTMLCanvasElement | null>;
   disabled: boolean;
@@ -54,13 +57,26 @@ export function DownloadButton({
       const blob = await getBlob();
       if (!blob) return;
       const file = new File([blob], "15aug-2026.png", { type: "image/png" });
+      const withLink = {
+        files: [file],
+        title: "15 AUG",
+        text: SHARE_TEXT,
+        url: SITE_URL,
+      };
+      const filesAndText = {
+        files: [file],
+        title: "15 AUG",
+        text: SHARE_TEXT,
+      };
 
-      if (navigator.canShare?.({ files: [file] })) {
-        await navigator.share({
-          files: [file],
-          title: "15 AUG",
-          text: "My Independence Day poster 🇮🇳",
-        });
+      if (navigator.canShare?.(withLink)) {
+        await navigator.share(withLink);
+        track("shared", { vibe, template_id: templateId, method: "native" });
+        return;
+      }
+
+      if (navigator.canShare?.(filesAndText)) {
+        await navigator.share(filesAndText);
         track("shared", { vibe, template_id: templateId, method: "native" });
         return;
       }
